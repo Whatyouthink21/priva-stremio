@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TG HUB — Stremio Addon Configuration</title>
+<style>
+  :root {
+    --accent: #e11d2e;
+    --bg: #0b0b0f;
+    --panel: #16161d;
+    --line: #2a2a35;
+    --text: #e7e7ee;
+    --muted: #9a9aae;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 20px 64px;
+    background: radial-gradient(900px 500px at 15% -10%, #2a0d13, var(--bg));
+    color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); margin: 0 0 28px; font-size: 14px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; padding: 20px; margin-bottom: 18px;
+  }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 16px; font-weight: 600; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .row.one { grid-template-columns: 1fr; }
+  @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+  label { display: block; font-size: 13px; margin-bottom: 6px; color: var(--muted); }
+  input[type="text"], input[type="number"], select {
+    width: 100%; padding: 9px 11px; border-radius: 9px;
+    border: 1px solid var(--line); background: #101017; color: var(--text);
+    font: inherit; font-size: 14px;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+  .swatch { display: flex; align-items: center; gap: 8px; }
+  .swatch input[type="color"] {
+    width: 42px; height: 38px; padding: 2px; border-radius: 9px;
+    border: 1px solid var(--line); background: #101017; cursor: pointer;
+  }
+  .checks { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+    border: 1px solid var(--line); background: #101017; color: var(--text);
+    padding: 8px 12px; border-radius: 999px; font-size: 13.5px; user-select: none;
+  }
+  .chip:hover { border-color: #3d3d4d; }
+  .chip input { accent-color: var(--accent); margin: 0; }
+  .chip.on { border-color: var(--accent); background: #1e1013; }
+  .toggle { display: flex; align-items: flex-start; gap: 10px; margin-top: 4px; }
+  .toggle input { margin-top: 3px; accent-color: var(--accent); }
+  .hint { color: var(--muted); font-size: 12.5px; margin-top: 7px; }
+  .out {
+    background: #0a0a0e; border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 13px; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    word-break: break-all; color: #cfd3ff;
+  }
+  .buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  button {
+    padding: 10px 16px; border-radius: 9px; border: 1px solid var(--line);
+    background: #1b1b24; color: var(--text); font: inherit; font-size: 14px; cursor: pointer;
+  }
+  button:hover { border-color: #3d3d4d; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover { filter: brightness(1.1); }
+  .note { background: #141420; border-left: 3px solid var(--accent); padding: 12px 14px; border-radius: 0 8px 8px 0; font-size: 13.5px; color: #c9c9d6; }
+  code { background: #0a0a0e; padding: 2px 6px; border-radius: 5px; font-size: 12.5px; }
+  .ok { color: #4ade80; font-size: 13px; margin-left: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>TG HUB · Stremio Addon</h1>
+  <p class="sub">Set your player preferences, then install the generated manifest URL in Stremio.</p>
+
+  <div class="card">
+    <h2>Where Stremio will reach this addon</h2>
+    <div class="row one">
+      <div>
+        <label for="origin">Addon base URL</label>
+        <input type="text" id="origin" placeholder="http://127.0.0.1:7000" />
+        <div class="hint">If Stremio runs on a different device (phone, TV), put this behind a tunnel and paste the public https URL here.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Player preferences</h2>
+
+    <div class="row">
+      <div>
+        <label for="color">Accent colour</label>
+        <div class="swatch">
+          <input type="color" id="colorPicker" value="#e11d2e" />
+          <input type="text" id="color" placeholder="e11d2e (leave blank for default)" maxlength="6" />
+        </div>
+      </div>
+      <div>
+        <label for="lang">Preferred audio language</label>
+        <select id="lang">
+          <option value="">Provider default</option>
+          <option value="hi">हिंदी — Hindi</option>
+          <option value="eng">English</option>
+          <option value="jap">日本語 — Japanese</option>
+          <option value="tam">தமிழ் — Tamil</option>
+          <option value="tel">తెలుగు — Telugu</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="loading">Loading screen style</label>
+        <select id="loading">
+          <option value="">1 — default</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+        </select>
+      </div>
+      <div>
+        <label for="server">Force server <span style="color:#6b6b7d">(optional)</span></label>
+        <input type="text" id="server" placeholder="e.g. cinemaos" />
+      </div>
+    </div>
+
+    <div class="row one">
+      <div>
+        <label>Extra language shortcuts</label>
+        <div class="checks" id="langChips"></div>
+        <div class="hint">Adds one extra stream entry per language, so you can pick the dub straight from Stremio.</div>
+      </div>
+    </div>
+
+    <div class="row one">
+      <div>
+        <label>Behaviour</label>
+        <label class="toggle"><input type="checkbox" id="back" checked /> <span>Show back button</span></label>
+        <label class="toggle"><input type="checkbox" id="episodeSelector" checked /> <span>Show Episodes button (TV)</span></label>
+        <label class="toggle"><input type="checkbox" id="autoplayNextEp" checked /> <span>Autoplay next episode (TV)</span></label>
+        <label class="toggle"><input type="checkbox" id="useBridge" /> <span>Use the bridge page (full-screen shell + resume from Stremio clicks)</span></label>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Your manifest URL</h2>
+    <div class="out" id="manifestUrl">…</div>
+    <div class="buttons">
+      <button class="primary" id="copy">Copy manifest URL</button>
+      <button id="test">Open manifest</button>
+      <button id="reset">Reset to defaults</button>
+      <span class="ok" id="copied" hidden>Copied ✓</span>
+    </div>
+    <div class="hint" style="margin-top:12px">
+      In Stremio: <strong>Add-ons → “+ Add Addon”</strong> → paste the URL → Install.
+      Then open any movie or series and pick the <strong>TG HUB</strong> stream.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="note">
+      <strong>How playback works.</strong> Stremio's built-in player only accepts direct video files
+      (mp4 / m3u8 / mpd), not web pages — so the TG HUB embed cannot play inside it.
+      This addon returns the SDK's <code>externalUrl</code> field instead, which tells Stremio to hand
+      the title off to your browser. You get TG HUB's full player: server switching, quality,
+      multi-audio, subtitles, skip intro/outro and resume.
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const LANGS = [
+    { code: 'hi', label: 'हिंदी' },
+    { code: 'eng', label: 'English' },
+    { code: 'jap', label: '日本語' },
+    { code: 'tam', label: 'தமிழ்' },
+    { code: 'tel', label: 'తెలుగు' },
+  ];
+
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    origin: $('origin'), color: $('color'), colorPicker: $('colorPicker'),
+    lang: $('lang'), loading: $('loading'), server: $('server'),
+    back: $('back'), episodeSelector: $('episodeSelector'),
+    autoplayNextEp: $('autoplayNextEp'), useBridge: $('useBridge'),
+    chips: $('langChips'), out: $('manifestUrl'), copied: $('copied'),
+  };
+
+  // Existing config from the URL path, if we were opened as /<config>/configure
+  const fromPath = (location.pathname.match(/^\/([A-Za-z0-9_-]+)\/configure\/?$/) || [])[1] || '';
+  let initial = {};
+  if (fromPath) {
+    try {
+      initial = JSON.parse(atob(fromPath.replace(/-/g, '+').replace(/_/g, '/'))) || {};
+    } catch { initial = {}; }
+  }
+
+  function base64url(str) {
+    return btoa(unescape(encodeURIComponent(str)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  // Build chips
+  LANGS.forEach((l) => {
+    const label = document.createElement('label');
+    label.className = 'chip';
+    label.dataset.code = l.code;
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = l.code;
+    cb.addEventListener('change', () => { label.classList.toggle('on', cb.checked); render(); });
+    label.append(cb, document.createTextNode(l.label));
+    els.chips.append(label);
+  });
+
+  function loadForm(cfg) {
+    els.origin.value = cfg._origin || location.origin;
+    els.color.value = cfg.color || '';
+    els.colorPicker.value = cfg.color ? '#' + cfg.color : '#e11d2e';
+    els.lang.value = cfg.lang || '';
+    els.loading.value = cfg.loading || '';
+    els.server.value = cfg.server || '';
+    els.back.checked = cfg.back !== 'false';
+    els.episodeSelector.checked = cfg.episodeSelector !== 'false';
+    els.autoplayNextEp.checked = cfg.autoplayNextEp !== 'true' ? cfg.autoplayNextEp === true : true;
+    if (typeof cfg.autoplayNextEp === 'string') els.autoplayNextEp.checked = cfg.autoplayNextEp === 'true';
+    els.useBridge.checked = cfg.useBridge === true;
+    const set = new Set(Array.isArray(cfg.languages) ? cfg.languages : []);
+    [...els.chips.querySelectorAll('input')].forEach((cb) => {
+      cb.checked = set.has(cb.value);
+      cb.closest('.chip').classList.toggle('on', cb.checked);
+    });
+  }
+
+  function readForm() {
+    const color = els.color.value.trim().replace(/^#/, '').toLowerCase();
+    return {
+      baseUrl: 'https://tgvid.lovable.app',
+      color: /^[0-9a-f]{6}$/.test(color) ? color : '',
+      lang: els.lang.value,
+      back: els.back.checked ? 'true' : 'false',
+      episodeSelector: els.episodeSelector.checked ? 'true' : 'false',
+      autoplayNextEp: els.autoplayNextEp.checked ? 'true' : 'false',
+      loading: els.loading.value,
+      server: els.server.value.trim(),
+      languages: [...els.chips.querySelectorAll('input')].filter((c) => c.checked).map((c) => c.value),
+      useBridge: els.useBridge.checked,
+    };
+  }
+
+  function manifestUrl() {
+    const cfg = readForm();
+    const encoded = base64url(JSON.stringify(cfg));
+    const base = (els.origin.value.trim() || location.origin).replace(/\/+$/, '');
+    return `${base}/${encoded}/manifest.json`;
+  }
+
+  function render() {
+    els.out.textContent = manifestUrl();
+    els.copied.hidden = true;
+  }
+
+  els.colorPicker.addEventListener('input', () => {
+    els.color.value = els.colorPicker.value.replace('#', '');
+    render();
+  });
+  ['color', 'lang', 'loading', 'server', 'origin'].forEach((k) =>
+    els[k].addEventListener('input', render));
+  ['back', 'episodeSelector', 'autoplayNextEp', 'useBridge'].forEach((k) =>
+    els[k].addEventListener('change', render));
+
+  $('copy').addEventListener('click', async () => {
+    const url = manifestUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = url; document.body.append(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+    }
+    els.copied.hidden = false;
+    setTimeout(() => { els.copied.hidden = true; }, 2000);
+  });
+
+  $('test').addEventListener('click', () => window.open(manifestUrl(), '_blank'));
+
+  $('reset').addEventListener('click', () => {
+    loadForm({ _origin: location.origin, back: 'true', episodeSelector: 'true', autoplayNextEp: 'true' });
+    render();
+  });
+
+  loadForm({ ...initial, _origin: location.origin });
+  render();
+})();
+</script>
+</body>
+</html>

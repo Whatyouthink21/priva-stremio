@@ -1,0 +1,21 @@
+{
+  "name": "tghub-stremio-addon",
+  "version": "1.1.0",
+  "description": "Stremio addon that launches TG HUB's embeddable player for movies and TV episodes.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/smoke.mjs",
+    "assets": "node scripts/make-assets.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "stremio",
+    "stremio-addon",
+    "tghub"
+  ],
+  "license": "MIT"
+}
