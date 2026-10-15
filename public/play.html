@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>TG HUB</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #000; overflow: hidden;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  #frame { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #000; }
+  #fallback {
+    position: fixed; inset: 0; display: none; place-content: center; text-align: center;
+    color: #e5e7eb; padding: 24px; gap: 12px;
+  }
+  #fallback.show { display: grid; }
+  #fallback a { color: #e11d2e; }
+  .spinner {
+    width: 34px; height: 34px; margin: 0 auto 4px;
+    border: 3px solid rgba(255,255,255,.15); border-top-color: #e11d2e; border-radius: 50%;
+    animation: spin .9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+  <iframe
+    id="frame"
+    allowfullscreen
+    allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+    referrerpolicy="no-referrer"></iframe>
+
+  <div id="fallback">
+    <div>
+      <div class="spinner"></div>
+      <p id="fallback-text">Opening TG HUB…</p>
+      <p><a id="fallback-link" href="#" target="_blank" rel="noopener">Open the player directly ↗</a></p>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const type = params.get('type') === 'series' ? 'series' : 'movie';
+  const tmdbId = params.get('id') || '';
+  const season = params.get('s') || '';
+  const episode = params.get('e') || '';
+  const lang = params.get('lang') || '';
+
+  if (!tmdbId || (type === 'series' && (!season || !episode))) {
+    document.getElementById('fallback').classList.add('show');
+    document.getElementById('fallback-text').textContent = 'Missing title information in the link.';
+    return;
+  }
+
+  // The addon's config lives in the first path segment: /<config>/play.html
+  const cfgParam = (location.pathname.match(/^\/([A-Za-z0-9_-]+)\/play\.html$/) || [])[1] || '';
+
+  const storageKey = `tghub:${type}:${tmdbId}${type === 'series' ? `:${season}:${episode}` : ''}`;
+
+  function savedTime() {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return null;
+      const t = Number(JSON.parse(raw).t);
+      return Number.isFinite(t) && t > 15 ? Math.floor(t) : null;
+    } catch { return null; }
+  }
+
+  function saveTime(t, duration) {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ t, duration, at: Date.now() }));
+    } catch { /* storage disabled — TG HUB still remembers internally */ }
+  }
+
+  // Decode the addon config so the bridge reuses the same options as a direct link.
+  let cfg = {};
+  if (cfgParam) {
+    try {
+      const json = atob(cfgParam.replace(/-/g, '+').replace(/_/g, '/'));
+      cfg = JSON.parse(json) || {};
+    } catch { cfg = {}; }
+  }
+
+  const url = new URL(
+    `https://tgvid.lovable.app/embed/${type === 'series' ? 'tv' : 'movie'}/${encodeURIComponent(tmdbId)}` +
+    (type === 'series' ? `/${encodeURIComponent(season)}/${encodeURIComponent(episode)}` : '')
+  );
+  if (cfg.color) url.searchParams.set('color', cfg.color);
+  if (lang) url.searchParams.set('lang', lang);
+  else if (cfg.lang) url.searchParams.set('lang', cfg.lang);
+  if (cfg.back && cfg.back !== 'true') url.searchParams.set('back', cfg.back);
+  if (cfg.episodeSelector && cfg.episodeSelector !== 'true') url.searchParams.set('episodeSelector', cfg.episodeSelector);
+  if (cfg.autoplayNextEp && cfg.autoplayNextEp !== 'true') url.searchParams.set('autoplayNextEp', cfg.autoplayNextEp);
+  if (cfg.loading) url.searchParams.set('loading', cfg.loading);
+  if (cfg.server) url.searchParams.set('server', cfg.server);
+
+  const resume = savedTime();
+  if (resume) url.searchParams.set('t', String(resume));
+
+  const frame = document.getElementById('frame');
+  frame.src = url.toString();
+
+  document.getElementById('fallback-link').href = url.toString();
+  const timeout = setTimeout(() => {
+    document.getElementById('fallback').classList.add('show');
+    document.getElementById('fallback-text').textContent =
+      'Still loading — TG HUB may be slow, or your network is blocking it.';
+  }, 12000);
+
+  // Playback events from the TG HUB player (see their embed docs).
+  window.addEventListener('message', (e) => {
+    const d = e.data;
+    if (!d || d.type !== 'TGFLIX_EVENT') return;
+
+    if (d.event === 'ready') {
+      clearTimeout(timeout);
+      document.getElementById('fallback').classList.remove('show');
+      if (resume) frame.contentWindow?.postMessage({ type: 'TGFLIX_CMD', cmd: 'seek', value: resume }, '*');
+      return;
+    }
+    if (d.event === 'timeupdate' || d.event === 'pause' || d.event === 'ended' || d.event === 'seeked') {
+      if (typeof d.currentTime === 'number') saveTime(d.currentTime, d.duration);
+    }
+    if (d.event === 'ended') {
+      try { localStorage.removeItem(storageKey); } catch {}
+    }
+  });
+})();
+</script>
+</body>
+</html>

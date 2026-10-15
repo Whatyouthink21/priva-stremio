@@ -1,0 +1,31 @@
+# User-level systemd unit so the addon starts on login and survives crashes.
+#
+#   mkdir -p ~/.config/systemd/user
+#   cp deploy/systemd/tghub-addon.service ~/.config/systemd/user/
+#   # edit WorkingDirectory / ExecStart to match where you cloned the repo
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now tghub-addon
+#   systemctl --user status tghub-addon
+#   journalctl --user -u tghub-addon -f
+#
+# Tip: `loginctl enable-linger $USER` keeps it running after you log out.
+
+[Unit]
+Description=TG HUB Stremio Addon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/priva-stremio
+ExecStart=/usr/bin/node %h/priva-stremio/server.js
+Restart=always
+RestartSec=5
+Environment=PORT=7000
+Environment=HOST=127.0.0.1
+# Uncomment if you expose it through a tunnel:
+# Environment=PUBLIC_ORIGIN=https://your-tunnel.example.com
+# Environment=TMDB_API_KEY=your_tmdb_read_access_token
+
+[Install]
+WantedBy=default.target
