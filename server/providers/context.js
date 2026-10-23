@@ -5,9 +5,12 @@
 
 import axios from "axios";
 import * as cheerio from "cheerio";
+import dns from "node:dns";
 import fs from "node:fs";
 import path from "node:path";
 import { DEFAULT_HEADERS } from "./types.js";
+
+dns.setDefaultResultOrder("ipv4first");
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const JAR_DIR = path.join(DATA_DIR, "cookies");
@@ -170,18 +173,78 @@ export function sanitizeCookieHeader(header, nowMs = Date.now()) {
 }
 
 /* ------------------------------------------------------------------ */
-/* axios with retry + cookie jar                                       */
+/* Fast dead-host circuit breaker + axios with smart retry             */
 /* ------------------------------------------------------------------ */
+
+const DEAD_HOST_TTL_MS = 5 * 60_000;
+const deadHosts = new Map();
+
+function hostOf(rawUrl) {
+  try {
+    return new URL(rawUrl).hostname.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+export function isHostMarkedDead(rawUrl) {
+  const host = hostOf(rawUrl);
+  if (!host || host === "127.0.0.1" || host === "localhost") return false;
+  const until = deadHosts.get(host);
+  if (!until) return false;
+  if (until < Date.now()) {
+    deadHosts.delete(host);
+    return false;
+  }
+  return true;
+}
+
+export function noteNetworkFailure(rawUrl, err) {
+  const host = hostOf(rawUrl);
+  if (!host || host === "127.0.0.1" || host === "localhost") return;
+  const code = String(err?.cause?.code || err?.code || "").toUpperCase();
+  const msg = String(err?.cause?.message || err?.message || "");
+  if (
+    /ETIMEDOUT|ECONNABORTED|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|CERT_|SELF_SIGNED|ERR_TLS|ABORT_ERR/.test(
+      code,
+    ) ||
+    /timeout of \d+ms exceeded|timed out|getaddrinfo/i.test(msg)
+  ) {
+    deadHosts.set(host, Date.now() + DEAD_HOST_TTL_MS);
+  }
+}
+
+function isNonRetryableError(err) {
+  const code = String(err?.cause?.code || err?.code || "").toUpperCase();
+  const msg = String(err?.message || "");
+  return (
+    code === "HOST_UNREACHABLE" ||
+    /ETIMEDOUT|ECONNABORTED|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|CERT_|SELF_SIGNED|ERR_TLS|ERR_CANCELED|ABORT_ERR/.test(
+      code,
+    ) ||
+    /timeout|aborted|canceled/i.test(msg)
+  );
+}
 
 function makeClient(providerId, jar) {
   const client = axios.create({
-    timeout: 20_000,
+    timeout: 4_500,
     maxRedirects: 6,
     validateStatus: (s) => s >= 200 && s < 400,
     headers: { ...DEFAULT_HEADERS },
   });
 
   client.interceptors.request.use((cfg) => {
+    if (isHostMarkedDead(cfg.url)) {
+      const fastErr = new Error(`host unreachable (cached): ${hostOf(cfg.url)}`);
+      fastErr.code = "HOST_UNREACHABLE";
+      return Promise.reject(fastErr);
+    }
+
+    // Never allow a single blocked sub-extractor host to monopolize an entire provider budget.
+    const requestedTimeout = Number(cfg.timeout) || 4_500;
+    cfg.timeout = Math.min(requestedTimeout, 4_500);
+
     const cookie = jar.header(cfg.url || "");
     if (cookie) {
       cfg.headers = { ...cfg.headers, Cookie: cookie };
@@ -201,23 +264,29 @@ function makeClient(providerId, jar) {
     return cfg;
   });
 
-  client.interceptors.response.use((res) => {
-    jar.setFromResponse(res.config.url, res.headers["set-cookie"]);
-    return res;
-  });
+  client.interceptors.response.use(
+    (res) => {
+      jar.setFromResponse(res.config.url, res.headers["set-cookie"]);
+      return res;
+    },
+    (err) => {
+      noteNetworkFailure(err?.config?.url, err);
+      return Promise.reject(err);
+    },
+  );
 
   const rawGet = client.get.bind(client);
   client.get = async (url, cfg = {}) => {
     let lastErr;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < 2; attempt++) {
       try {
         return await rawGet(url, cfg);
       } catch (err) {
         lastErr = err;
         const status = err?.response?.status;
         if (status && status < 500 && status !== 429) break;
-        if (cfg?.signal?.aborted) break;
-        await sleep(180 * (attempt + 1) + Math.random() * 120);
+        if (cfg?.signal?.aborted || isNonRetryableError(err)) break;
+        await sleep(160 * (attempt + 1));
       }
     }
     throw lastErr;

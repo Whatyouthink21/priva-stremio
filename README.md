@@ -70,7 +70,7 @@ Nothing is stored in a database on the server. `/configure` encodes your prefere
 {
   "n": "Priva",
   "p": ["castle", "4khdhub", "autoEmbed", "movieBoxWeb", "kissKh"],
-  "b": { "castle": 6, "autoEmbed": 8, "movieBoxWeb": 8, "kissKh": 8, "4khdhub": 10 },
+  "b": { "castle": 6, "autoEmbed": 10, "movieBoxWeb": 10, "kissKh": 10, "4khdhub": 15 },
   "mk": true,
   "px": true,
   "max": 20
@@ -104,9 +104,9 @@ Then set `PUBLIC_BASE_URL=https://<your-subdomain>.trycloudflare.com` in `.env` 
 
 Stremio drops slow addon requests if they take too long, while sources like `4khdhub` walk multi-step extractor chains.
 
-- Per-provider default budgets: `castle=6000ms`, `autoEmbed=8000ms`, `movieBoxWeb=8000ms`, `kissKh=8000ms`, `4khdhub=10000ms`.
-- Once the fastest provider returns playable streams, `priva-stremio` waits **`RESOLVE_GRACE_MS=1000` (1 second)** for other fast peers and returns immediately so Stremio never hangs.
-- Slower providers **keep running in the background** and automatically upgrade the in-memory cache entry when they finish. If a slow source missed the first response window, simply **back out and re-open the stream list once** in Stremio to get the full cached set instantaneously.
+- Per-provider default budgets: `castle=6000ms`, `autoEmbed=10000ms`, `movieBoxWeb=10000ms`, `kissKh=10000ms`, `4khdhub=15000ms`.
+- Once the fastest provider returns playable streams, `priva-stremio` waits **`RESOLVE_GRACE_MS=3000` (3 seconds)** for other fast peers and returns immediately so Stremio stays responsive.
+- Slower providers **keep running in the background** and automatically upgrade the in-memory cache entry when they finish. On `/configure`, the Live Stream Tester automatically polls until background sources complete; in Stremio, re-opening the title once shows the full cached set instantaneously.
 
 ---
 

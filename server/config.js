@@ -34,10 +34,10 @@ const bool = (v, d = false) =>
 
 const DEFAULT_TIMEOUTS = {
   castle: 6_000,
-  autoEmbed: 8_000,
-  movieBoxWeb: 8_000,
-  kissKh: 8_000,
-  "4khdhub": 10_000,
+  autoEmbed: 10_000,
+  movieBoxWeb: 10_000,
+  kissKh: 10_000,
+  "4khdhub": 15_000,
 };
 
 const parsedTimeouts = Object.fromEntries(
@@ -69,9 +69,9 @@ export const config = {
   resolveGraceMs:
     process.env.RESOLVE_GRACE_MS !== undefined && process.env.RESOLVE_GRACE_MS !== ""
       ? Number(process.env.RESOLVE_GRACE_MS)
-      : 1_000,
-  providerTimeoutMs: Number(process.env.PROVIDER_TIMEOUT_MS || 8_000),
-  resolveBudgetMs: Number(process.env.RESOLVE_BUDGET_MS || 12_000),
+      : 3_000,
+  providerTimeoutMs: Number(process.env.PROVIDER_TIMEOUT_MS || 10_000),
+  resolveBudgetMs: Number(process.env.RESOLVE_BUDGET_MS || 16_000),
 
   proxyEnabled: bool(process.env.PROXY_ENABLED, true),
   proxyCacheSegmentsSec: Number(process.env.PROXY_CACHE_SEGMENTS || 300),

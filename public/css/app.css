@@ -619,6 +619,12 @@ input[type="range"] {
   color: #86efac;
 }
 
+.diag-pill.pending {
+  border-color: rgba(59, 130, 246, 0.45);
+  background: rgba(37, 99, 235, 0.12);
+  color: #93c5fd;
+}
+
 .diag-pill.timeout {
   border-color: rgba(234, 179, 8, 0.35);
   color: #fde047;

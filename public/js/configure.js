@@ -10,18 +10,18 @@ import {
 
 const FALLBACK_PROVIDERS = [
   { id: "castle", displayName: "Castle TV", description: "Fast MP4/HLS streams across a broad movie & TV catalog.", defaultBudgetSec: 6, status: "ok", latencyMs: null },
-  { id: "4khdhub", displayName: "4KHDHub", description: "High-bitrate multi-quality MKV releases up to 2160p via HubCloud.", defaultBudgetSec: 10, status: "ok", latencyMs: null },
-  { id: "autoEmbed", displayName: "MultiStream (autoEmbed)", description: "Aggregator reaching Cinejoy, Movy and Vidstuck in parallel.", defaultBudgetSec: 8, status: "ok", latencyMs: null },
-  { id: "movieBoxWeb", displayName: "MovieBox Web", description: "HLS/MP4 streams with multi-language captions.", defaultBudgetSec: 8, status: "ok", latencyMs: null },
-  { id: "kissKh", displayName: "KissKH", description: "Anime and Asian drama streams in HLS with real subtitles.", defaultBudgetSec: 8, status: "ok", latencyMs: null },
+  { id: "4khdhub", displayName: "4KHDHub", description: "High-bitrate multi-quality MKV releases up to 2160p via HubCloud.", defaultBudgetSec: 15, status: "ok", latencyMs: null },
+  { id: "autoEmbed", displayName: "MultiStream (autoEmbed)", description: "Aggregator reaching Cinejoy, Movy and Vidstuck in parallel.", defaultBudgetSec: 10, status: "ok", latencyMs: null },
+  { id: "movieBoxWeb", displayName: "MovieBox Web", description: "HLS/MP4 streams with multi-language captions.", defaultBudgetSec: 10, status: "ok", latencyMs: null },
+  { id: "kissKh", displayName: "KissKH", description: "Anime and Asian drama streams in HLS with real subtitles.", defaultBudgetSec: 10, status: "ok", latencyMs: null },
 ];
 
 const DEFAULT_BUDGETS = {
   castle: 6,
-  autoEmbed: 8,
-  movieBoxWeb: 8,
-  kissKh: 8,
-  "4khdhub": 10,
+  autoEmbed: 10,
+  movieBoxWeb: 10,
+  kissKh: 10,
+  "4khdhub": 15,
 };
 
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
@@ -256,33 +256,45 @@ function parseCardInfo(stream) {
   };
 }
 
-function renderTestOutput(streams, stats, wallMs) {
+function renderTestOutput(streams, stats, wallMs, { polling = false } = {}) {
   if (els.testSummary) {
     els.testSummary.hidden = false;
     const provPills = (stats?.providers || [])
       .map((p) => {
-        const cls = p.timedOut ? "timeout" : p.ok ? "ok" : "empty";
-        const stateLabel = p.timedOut
-          ? `timed out (${p.ms}ms)`
-          : p.ok
-            ? `${p.streams} stream${p.streams === 1 ? "" : "s"} (${p.ms}ms)`
-            : `${p.error || "0 streams"} (${p.ms}ms)`;
+        const cls = p.pending ? "pending" : p.timedOut ? "timeout" : p.ok ? "ok" : "empty";
+        const stateLabel = p.pending
+          ? `resolving… (${p.ms}ms)`
+          : p.timedOut
+            ? `timed out (${p.ms}ms)`
+            : p.ok
+              ? `${p.streams} stream${p.streams === 1 ? "" : "s"} (${p.ms}ms)`
+              : `${p.error || "0 streams"} (${p.ms}ms)`;
         return `<span class="diag-pill ${cls}">${escapeHtml(p.id)}: ${escapeHtml(stateLabel)}</span>`;
       })
-      .join("");
+      .join("\n          ");
 
     const titlePrefix = stats?.title
       ? `<strong>${escapeHtml(stats.title)}${stats.year ? ` (${escapeHtml(String(stats.year))})` : ""}</strong> · `
       : "";
+    const countsParts = [];
+    if (stats) {
+      countsParts.push(`${stats.answered} answered`);
+      if (stats.pending) countsParts.push(`${stats.pending} resolving in background`);
+      if (stats.timedOut) countsParts.push(`${stats.timedOut} timed out`);
+    }
+    const countsNote = countsParts.length ? ` (${countsParts.join(", ")})` : "";
     const partialNote = stats?.partial
-      ? ` · <span style="color:#fde047">Partial response — slower providers are finishing in background; click Test streams again to see cached stragglers.</span>`
+      ? ` · <span style="color:#93c5fd">${
+          polling
+            ? "Auto-updating live as background sources finish…"
+            : "Slower providers are finishing in background."
+        }</span>`
       : "";
 
     els.testSummary.innerHTML = `
       <div>
         ${titlePrefix}Returned <strong>${streams.length}</strong> stream row${streams.length === 1 ? "" : "s"}
-        in <strong>${Math.round(wallMs)} ms</strong>
-        ${stats ? `(${stats.answered} answered, ${stats.timedOut} timed out)` : ""}${partialNote}
+        in <strong>${Math.round(wallMs)} ms</strong>${countsNote}${partialNote}
       </div>
       ${provPills ? `<div class="provider-pills">${provPills}</div>` : ""}
     `;
@@ -301,18 +313,25 @@ function renderTestOutput(streams, stats, wallMs) {
   els.testResults.innerHTML = streams
     .map((s, idx) => {
       const info = parseCardInfo(s);
+      const badges = [
+        `<span class="badge badge-provider">${escapeHtml(info.provider)}</span>`,
+        info.quality ? `<span class="badge">${escapeHtml(info.quality)}</span>` : "",
+        info.container ? `<span class="badge">${escapeHtml(info.container)}</span>` : "",
+        info.size ? `<span class="badge">${escapeHtml(info.size)}</span>` : "",
+        `<span class="badge ${info.isProxy ? "badge-proxy" : "badge-direct"}">${
+          info.isProxy ? "Proxy (/p)" : "Direct"
+        }</span>`,
+        info.subsCount
+          ? `<span class="badge">${info.subsCount} sub${info.subsCount === 1 ? "" : "s"}</span>`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n              ");
       return `
         <div class="stream-card">
           <div class="stream-card-main">
             <div class="stream-badges">
-              <span class="badge badge-provider">${escapeHtml(info.provider)}</span>
-              ${info.quality ? `<span class="badge">${escapeHtml(info.quality)}</span>` : ""}
-              ${info.container ? `<span class="badge">${escapeHtml(info.container)}</span>` : ""}
-              ${info.size ? `<span class="badge">${escapeHtml(info.size)}</span>` : ""}
-              <span class="badge ${info.isProxy ? "badge-proxy" : "badge-direct"}">
-                ${info.isProxy ? "Proxy (/p)" : "Direct"}
-              </span>
-              ${info.subsCount ? `<span class="badge">${info.subsCount} sub${info.subsCount === 1 ? "" : "s"}</span>` : ""}
+              ${badges}
             </div>
             ${info.detail ? `<div class="stream-detail-line">${escapeHtml(info.detail)}</div>` : ""}
           </div>
@@ -328,8 +347,38 @@ function renderTestOutput(streams, stats, wallMs) {
   });
 }
 
+let activePollTimer = null;
+let activeTestRunId = 0;
+
+function stopStragglerPoll() {
+  if (activePollTimer) {
+    clearTimeout(activePollTimer);
+    activePollTimer = null;
+  }
+}
+
+async function fetchStreamAttempt(endpoint) {
+  const res = await fetch(endpoint, { headers: { Accept: "application/json" } });
+  let stats = null;
+  const rawHeader = res.headers.get("X-Priva-Stats");
+  if (rawHeader) {
+    try {
+      stats = JSON.parse(rawHeader);
+    } catch {
+      stats = null;
+    }
+  }
+  const body = await res.json();
+  return {
+    streams: Array.isArray(body?.streams) ? body.streams : [],
+    stats,
+  };
+}
+
 async function runLiveTest(ev) {
   ev?.preventDefault();
+  stopStragglerPoll();
+  const runId = ++activeTestRunId;
   updateUrlsNow();
 
   const rawId = (els.testId?.value || "").trim();
@@ -352,20 +401,36 @@ async function runLiveTest(ev) {
 
   const started = performance.now();
   try {
-    const res = await fetch(endpoint, { headers: { Accept: "application/json" } });
+    const first = await fetchStreamAttempt(endpoint);
+    if (runId !== activeTestRunId) return;
     const wallMs = performance.now() - started;
-    let stats = null;
-    const rawHeader = res.headers.get("X-Priva-Stats");
-    if (rawHeader) {
-      try {
-        stats = JSON.parse(rawHeader);
-      } catch {
-        stats = null;
-      }
-    }
-    const body = await res.json();
-    renderTestOutput(Array.isArray(body?.streams) ? body.streams : [], stats, wallMs);
+    const willPoll = Boolean(first.stats?.partial);
+    renderTestOutput(first.streams, first.stats, wallMs, { polling: willPoll });
     refreshHealth();
+
+    if (willPoll) {
+      let attempts = 0;
+      const pollNext = () => {
+        const t = setTimeout(async () => {
+          if (runId !== activeTestRunId) return;
+          attempts += 1;
+          try {
+            const next = await fetchStreamAttempt(endpoint);
+            if (runId !== activeTestRunId) return;
+            const totalWallMs = performance.now() - started;
+            const stillPartial = Boolean(next.stats?.partial) && attempts < 10;
+            renderTestOutput(next.streams, next.stats, totalWallMs, { polling: stillPartial });
+            refreshHealth();
+            if (stillPartial) pollNext();
+          } catch {
+            /* stop polling quietly if server closed */
+          }
+        }, 1600);
+        t.unref?.();
+        activePollTimer = t;
+      };
+      pollNext();
+    }
   } catch (err) {
     if (els.testSummary) {
       els.testSummary.hidden = false;

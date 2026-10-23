@@ -1,6 +1,11 @@
+import dns from "node:dns";
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+// Prefer IPv4 first so broken/unrouted dual-stack IPv6 on home ISPs does not add
+// multi-second TCP SYN stalls to upstream provider requests.
+dns.setDefaultResultOrder("ipv4first");
 import { config, warnings } from "./config.js";
 import { logger } from "./lib/log.js";
 import { proxyRouter } from "./routes/proxy.js";
