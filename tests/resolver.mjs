@@ -120,6 +120,11 @@ try {
   check("HTTP 200 returned without waiting for 4000ms hungB budget", res1.status === 200 && elapsed1 < 900, `${elapsed1}ms`);
   check("fastA stream is returned immediately", body1.streams.length === 1 && body1.streams[0].url === "https://cdn.example/fast-a.m3u8");
   check("response marks partial=true while hungB is pending", stats1.partial === true);
+  check(
+    "pending background source reports pending=true and timedOut=false (never falsely labeled timedOut)",
+    stats1.pending === 1 && stats1.timedOut === 0,
+    JSON.stringify(stats1),
+  );
   check("zero unhandled rejections from throwingC or hungB", unhandled === null);
 
   console.log("\n[2] Background straggler upgrades cache on reload");

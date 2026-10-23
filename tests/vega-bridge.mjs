@@ -4,7 +4,12 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import { createProviderContext, sanitizeCookieHeader } from "../server/providers/context.js";
+import {
+  createProviderContext,
+  sanitizeCookieHeader,
+  noteNetworkFailure,
+  isHostMarkedDead,
+} from "../server/providers/context.js";
 import { loadVegaProvider, resolveViaVega } from "../server/providers/vega.js";
 
 const check = (name, cond, detail = "") => {
@@ -53,6 +58,7 @@ await fs.writeFile(
   path.join(FIXTURE_DIR, "stream.js"),
   `
   exports.getStream = async function ({ providerContext }) {
+    if (typeof WebAssembly !== "object") throw new Error("WebAssembly missing in VM sandbox");
     providerContext.commonHeaders["Referer"] = "https://fixture.example/watch";
     return [{ server: "FixtureCDN", link: "https://cdn.fixture.example/master.m3u8", type: "m3u8" }];
   };
@@ -88,10 +94,23 @@ try {
     JSON.stringify(res.streams[0]),
   );
 
-  console.log("\n[2] Stale cf_clearance cookie sanitizer");
+  console.log("\n[2] Stale cf_clearance cookie sanitizer & dead-host circuit breaker");
   const staleTs = Math.floor(Date.now() / 1000) - 7200;
   const cleaned = sanitizeCookieHeader(`session=abc; cf_clearance=xyz-${staleTs}-0-1; lang=en`);
   check("strips expired cf_clearance cookie while keeping valid cookies", cleaned === "session=abc; lang=en", cleaned);
+
+  noteNetworkFailure("https://blocked-example.pk/chunk.js", Object.assign(new Error("timeout of 4500ms exceeded"), { code: "ECONNABORTED" }));
+  check("marks timed-out unreachable public host dead for fast fail", isHostMarkedDead("https://blocked-example.pk/other.js") === true);
+  let fastFailedMs = 9999;
+  const tDead = Date.now();
+  try {
+    await pcA.axios.get("https://blocked-example.pk/retry.js");
+  } catch (err) {
+    if (err.code === "HOST_UNREACHABLE") fastFailedMs = Date.now() - tDead;
+  }
+  check("subsequent axios calls to blocked host short-circuit in < 20ms", fastFailedMs < 20, `${fastFailedMs}ms`);
+  noteNetworkFailure("http://127.0.0.1:9999/test", Object.assign(new Error("refused"), { code: "ECONNREFUSED" }));
+  check("127.0.0.1 is never cached in dead-host circuit breaker", isHostMarkedDead("http://127.0.0.1:9999/test") === false);
 } finally {
   await fs.rm(FIXTURE_DIR, { recursive: true, force: true });
 }

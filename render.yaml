@@ -29,9 +29,9 @@ services:
       - key: VEGA_LINK_CONCURRENCY
         value: "3"
       - key: VEGA_TIMEOUTS
-        value: "castle=6000,autoEmbed=8000,movieBoxWeb=8000,kissKh=8000,4khdhub=10000"
+        value: "castle=6000,autoEmbed=10000,movieBoxWeb=10000,kissKh=10000,4khdhub=15000"
       - key: RESOLVE_GRACE_MS
-        value: "1000"
+        value: "3000"
       - key: TMDB_API_KEY
         sync: false
       - key: LOG_LEVEL

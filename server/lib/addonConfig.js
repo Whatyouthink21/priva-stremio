@@ -27,10 +27,10 @@ export const DEFAULT_MAX_STREAMS = 20;
 
 export const DEFAULT_BUDGETS_SEC = {
   castle: 6,
-  autoEmbed: 8,
-  movieBoxWeb: 8,
-  kissKh: 8,
-  "4khdhub": 10,
+  autoEmbed: 10,
+  movieBoxWeb: 10,
+  kissKh: 10,
+  "4khdhub": 15,
 };
 
 export class BadConfigError extends Error {

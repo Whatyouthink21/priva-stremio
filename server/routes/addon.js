@@ -182,7 +182,8 @@ async function handleStreamRequest(req, res, encodedConfig) {
     const diag = result.diagnostics || [];
     const answered = diag.filter((d) => !d.pending && !d.timedOut).length;
     const withStreams = diag.filter((d) => d.ok).length;
-    const timedOut = diag.filter((d) => d.timedOut || d.pending).length;
+    const pendingCount = diag.filter((d) => d.pending).length;
+    const timedOut = diag.filter((d) => d.timedOut && !d.pending).length;
 
     const statsHeader = {
       title: meta?.title || result.meta?.title || null,
@@ -192,11 +193,12 @@ async function handleStreamRequest(req, res, encodedConfig) {
       partial: Boolean(result.partial),
       answered,
       withStreams,
+      pending: pendingCount,
       timedOut,
       providers: diag.map((d) => ({
         id: d.provider,
         ok: d.ok,
-        timedOut: Boolean(d.timedOut || d.pending),
+        timedOut: Boolean(d.timedOut && !d.pending),
         pending: Boolean(d.pending),
         ms: d.ms,
         streams: d.streams,

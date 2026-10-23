@@ -263,11 +263,12 @@ try {
 
   const cards = document.querySelectorAll(".stream-card");
   check(
-    "live stream test renders Direct + Proxy cards for castle (MKV excluded per toggle)",
+    "live stream test renders Direct + Proxy cards with clean badge spacing (never concatenated)",
     cards.length === 2 &&
       document.getElementById("test-results").textContent.includes("1080p") &&
       document.getElementById("test-results").textContent.includes("HLS") &&
       document.getElementById("test-results").textContent.includes("2.4 GB") &&
+      !cards[0].textContent.includes("castle1080p") &&
       document.getElementById("test-summary").textContent.includes("The Matrix"),
     `cards=${cards.length}`,
   );

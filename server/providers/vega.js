@@ -18,6 +18,7 @@ import {
   extractReleaseDetail,
   DEFAULT_HEADERS,
 } from "./types.js";
+import { isHostMarkedDead, noteNetworkFailure } from "./context.js";
 import { BLOCKED_PROVIDERS } from "../../scripts/vendor.mjs";
 
 const log = logger("vega");
@@ -102,9 +103,10 @@ function makeSandbox(pc) {
     btoa,
     AbortController,
     AbortSignal,
+    WebAssembly: globalThis.WebAssembly,
     crypto: globalThis.crypto,
     structuredClone,
-    fetch: (input, init = {}) => {
+    fetch: async (input, init = {}) => {
       const headers = new Headers(DEFAULT_HEADERS);
       try {
         new Headers(init.headers || {}).forEach((value, key) => headers.set(key, value));
@@ -115,11 +117,23 @@ function makeSandbox(pc) {
       if (/vega-providers.*\/urls\.json(?:\?|$)/i.test(urlStr)) {
         return resolveUrlsJsonResponse(input, init, headers);
       }
-      return fetch(input, {
-        ...init,
-        headers,
-        signal: init.signal || AbortSignal.timeout(8_000),
-      });
+      if (isHostMarkedDead(urlStr)) {
+        throw Object.assign(new Error(`host unreachable (cached): ${urlStr}`), {
+          code: "HOST_UNREACHABLE",
+        });
+      }
+      const capSignal = AbortSignal.timeout(5_000);
+      const signal = init.signal ? AbortSignal.any([init.signal, capSignal]) : capSignal;
+      try {
+        return await fetch(input, {
+          ...init,
+          headers,
+          signal,
+        });
+      } catch (err) {
+        if (!init.signal?.aborted) noteNetworkFailure(urlStr, err);
+        throw err;
+      }
     },
     __providerContext: pc,
   };
