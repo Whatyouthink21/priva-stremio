@@ -1,18 +1,19 @@
 /**
- * Vendor sanity checks for vendored Vega providers (100% offline).
+ * Vendor sanity & offline provider execution checks across all 5 Vega providers.
  *
  * Verifies:
- *   - All expected core providers (castle, 4khdhub, autoEmbed, movieBoxWeb, and kissKh if present)
+ *   - All 5 enabled Vega providers (castle, 4khdhub, autoEmbed, movieBoxWeb, kissKh)
  *     load cleanly inside node:vm and export getStream as a function
- *   - Vendor urls.json exists, is valid JSON, and contains dynamic base URLs (never hardcoded in server/)
+ *   - Real vendored kissKh bundle executes its full search -> meta -> keyGenerator -> stream + subtitle
+ *     pipeline completely offline against mocked API responses using live urls.json base URL
+ *   - Vendor urls.json exists, is valid JSON, and zero mirror domains are hardcoded in server/
  *   - Blocked providers ("everything", "mxplayer", disabled upstream providers) are rejected
- *     by both scripts/vendor.mjs and loadVegaProvider()
  */
 
 import fs from "node:fs/promises";
-import { existsSync } from "node:fs";
 import path from "node:path";
-import { loadVegaProvider } from "../server/providers/vega.js";
+import { loadVegaProvider, resolveViaVega } from "../server/providers/vega.js";
+import { createProviderContext } from "../server/providers/context.js";
 import { vendorProviders, BLOCKED_PROVIDERS } from "../scripts/vendor.mjs";
 
 const check = (name, cond, detail = "") => {
@@ -24,15 +25,11 @@ const check = (name, cond, detail = "") => {
   }
 };
 
-const REQUIRED_CORE = ["castle", "4khdhub", "autoEmbed", "movieBoxWeb"];
-const OPTIONAL_EXTRA = ["kissKh"];
+const REQUIRED_PROVIDERS = ["castle", "4khdhub", "autoEmbed", "movieBoxWeb", "kissKh"];
 const VENDOR_DIR = path.join(process.cwd(), "server", "providers", "vendor");
 
 console.log("\n[1] Vendored Vega provider bundles load in node:vm");
-for (const id of [...REQUIRED_CORE, ...OPTIONAL_EXTRA]) {
-  const dir = path.join(VENDOR_DIR, id);
-  if (!REQUIRED_CORE.includes(id) && !existsSync(dir)) continue;
-
+for (const id of REQUIRED_PROVIDERS) {
   const mod = await loadVegaProvider(id);
   check(
     `provider "${id}" loads cleanly and exports getStream()`,
@@ -71,7 +68,90 @@ for (const rel of serverFiles) {
   );
 }
 
-console.log("\n[3] Blocked providers refused cleanly");
+console.log("\n[3] Real vendored kissKh bundle runs search -> meta -> keyGenerator -> stream offline");
+const kissRequests = [];
+const mockPc = {
+  ...createProviderContext("kissKh"),
+  axios: {
+    get: async (url) => {
+      kissRequests.push(url);
+      if (url.includes("/api/DramaList/Search")) {
+        return {
+          data: [{ id: 7710, title: "Moving (2023)", thumbnail: "https://img.example/moving.jpg" }],
+        };
+      }
+      if (url.includes("/api/DramaList/Drama/7710")) {
+        return {
+          data: {
+            id: 7710,
+            title: "Moving",
+            description: "Supernatural action series.",
+            thumbnail: "https://img.example/moving.jpg",
+            episodesCount: 2,
+            episodes: [
+              { id: 90102, number: 2 },
+              { id: 90101, number: 1 },
+            ],
+          },
+        };
+      }
+      if (url.includes("/api/DramaList/Episode/90101.png")) {
+        return {
+          data: { Video: "https://hls.kisskh-cdn.example/moving-ep1/master.m3u8" },
+        };
+      }
+      if (url.includes("/api/Sub/90101")) {
+        return {
+          data: [
+            { label: "English", land: "en", src: "https://sub.kisskh-cdn.example/moving-ep1.vtt" },
+          ],
+        };
+      }
+      throw new Error(`unexpected kissKh URL: ${url}`);
+    },
+  },
+};
+
+const origFetch = globalThis.fetch;
+globalThis.fetch = async (input) => {
+  const u = typeof input === "string" ? input : input?.url || "";
+  if (u.includes("urls.json")) {
+    return new Response(urlsRaw, { status: 200, headers: { "Content-Type": "application/json" } });
+  }
+  throw new Error(`unexpected external fetch during offline test: ${u}`);
+};
+
+try {
+  const kissOut = await resolveViaVega({
+    providerId: "kissKh",
+    tmdbId: "65930",
+    imdbId: "tt24640580",
+    type: "series",
+    season: 1,
+    episode: 1,
+    title: "Moving",
+    year: 2023,
+    providerContext: mockPc,
+  });
+
+  check("kissKh resolves HLS stream for episode 1", kissOut.streams.length === 1 && kissOut.streams[0].type === "hls");
+  check(
+    "kissKh keyGenerator attached signed kkey query param on Episode + Sub API requests",
+    kissRequests.some((u) => u.includes("/Episode/90101.png") && /[?&]kkey=[^&]{8,}/.test(u)) &&
+      kissRequests.some((u) => u.includes("/api/Sub/90101") && /[?&]kkey=[^&]{8,}/.test(u)),
+    JSON.stringify(kissRequests),
+  );
+  check(
+    "kissKh attaches Referer from live urls.json base URL and preserves subtitles",
+    kissOut.streams[0].headers?.Referer?.startsWith(urlsJson.kissKh.url) &&
+      kissOut.streams[0].subtitles?.[0]?.language === "en",
+    JSON.stringify(kissOut.streams[0]),
+  );
+} finally {
+  globalThis.fetch = origFetch;
+}
+
+console.log("\n[4] Blocked providers refused cleanly");
 for (const bad of ["everything", "mxplayer", "multi", "movieBox"]) {
   check(`BLOCKED_PROVIDERS includes "${bad}"`, BLOCKED_PROVIDERS.has(bad));
 

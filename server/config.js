@@ -81,7 +81,7 @@ export const config = {
     base:
       process.env.VEGA_CDN_BASE ||
       "https://cdn.jsdelivr.net/gh/Zenda-Cross/vega-providers@main/dist",
-    sources: (process.env.VEGA_SOURCES || "castle,4khdhub,autoEmbed,movieBoxWeb")
+    sources: (process.env.VEGA_SOURCES || "castle,4khdhub,autoEmbed,movieBoxWeb,kissKh")
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean),

@@ -19,7 +19,7 @@ import path from "node:path";
 import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
 
-const DEFAULT_PROVIDERS = ["castle", "4khdhub", "autoEmbed", "movieBoxWeb"];
+const DEFAULT_PROVIDERS = ["castle", "4khdhub", "autoEmbed", "movieBoxWeb", "kissKh"];
 const MODULES = ["catalog", "posts", "meta", "episodes", "stream", "settings"];
 
 /** Providers that cannot work headless or are marked disabled: true upstream. */

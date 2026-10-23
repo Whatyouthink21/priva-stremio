@@ -13,6 +13,7 @@ const FALLBACK_PROVIDERS = [
   { id: "4khdhub", displayName: "4KHDHub", description: "High-bitrate multi-quality MKV releases up to 2160p via HubCloud.", defaultBudgetSec: 10, status: "ok", latencyMs: null },
   { id: "autoEmbed", displayName: "MultiStream (autoEmbed)", description: "Aggregator reaching Cinejoy, Movy and Vidstuck in parallel.", defaultBudgetSec: 8, status: "ok", latencyMs: null },
   { id: "movieBoxWeb", displayName: "MovieBox Web", description: "HLS/MP4 streams with multi-language captions.", defaultBudgetSec: 8, status: "ok", latencyMs: null },
+  { id: "kissKh", displayName: "KissKH", description: "Anime and Asian drama streams in HLS with real subtitles.", defaultBudgetSec: 8, status: "ok", latencyMs: null },
 ];
 
 const DEFAULT_BUDGETS = {

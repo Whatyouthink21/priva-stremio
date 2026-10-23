@@ -102,8 +102,8 @@ try {
     stdout,
   );
   check(
-    "loads vendored core providers on boot",
-    ["castle", "4khdhub", "autoEmbed", "movieBoxWeb"].every((id) =>
+    "loads all 5 vendored providers on boot",
+    ["castle", "4khdhub", "autoEmbed", "movieBoxWeb", "kissKh"].every((id) =>
       ready.providers.some((p) => p.id === id),
     ),
     JSON.stringify(ready?.providers?.map((p) => p.id)),
