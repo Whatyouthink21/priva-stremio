@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Priva — Stremio Stream Addon</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M8 5.5l11 6.5-11 6.5z" /></svg>
+      </span>
+      <span>Priva</span>
+      <span class="brand-badge" id="addon-version">v1.0.0</span>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="/" aria-current="page">Overview</a>
+      <a href="/configure">Configure</a>
+      <a href="/manifest.json" target="_blank" rel="noopener">Manifest</a>
+      <a href="/health" target="_blank" rel="noopener">Health</a>
+    </nav>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <h1>Direct &amp; range-proxied streams for Stremio</h1>
+      <p>
+        Stream-only Stremio addon built on the Priva multi-provider resolver. Emits direct upstream
+        links alongside signed <code>/p/&lt;token&gt;</code> range-proxy rows so HLS playlists, custom
+        referers, and multi-gigabyte MKV files play cleanly without third-party wrappers.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" id="default-install-btn" href="stremio://127.0.0.1:7000/manifest.json">
+          Install default in Stremio
+        </a>
+        <a class="btn" href="/configure">Customize &amp; test streams</a>
+        <button class="btn" type="button" id="copy-default-manifest">Copy manifest URL</button>
+      </div>
+    </section>
+
+    <div class="stack">
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Registered providers</h2>
+            <p class="card-sub">Live status, rolling response latency, and per-source timeout budgets from <code>/health</code>.</p>
+          </div>
+          <a class="btn btn-sm" href="/configure">Configure sources</a>
+        </div>
+        <div class="provider-list" id="landing-providers">
+          <div class="provider-item">
+            <span class="provider-desc">Loading provider health…</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="info-grid">
+        <article class="card">
+          <h2 class="card-title">Desktop vs Stremio Web</h2>
+          <p class="card-sub">
+            Stremio Desktop plays HLS, MP4, and MKV natively over local <code>127.0.0.1:7000</code>.
+            Stremio Web requires an HTTPS origin (or a Cloudflare tunnel) and cannot decode all MKV tracks
+            in-browser — toggle MKV off on <a href="/configure" style="color:#93c5fd">/configure</a> when needed.
+          </p>
+        </article>
+
+        <article class="card">
+          <h2 class="card-title">Fast partial answers + cache fill</h2>
+          <p class="card-sub">
+            Slow sources never hold fast sources hostage. Once fast providers return streams plus a 1 second
+            grace window, Stremio receives playable links immediately while stragglers finish in the background.
+          </p>
+        </article>
+
+        <article class="card">
+          <h2 class="card-title">Stateless URL configuration</h2>
+          <p class="card-sub">
+            Every preference lives inside your <code>/&lt;config&gt;/manifest.json</code> install link as
+            base64url JSON — nothing is stored in a database or shared with other users.
+          </p>
+        </article>
+      </section>
+    </div>
+
+    <footer class="footer-note">
+      <span>Addon ID: <code>community.priva.streams</code></span>
+      <span>Stream-only · Zero catalog clutter · Local &amp; Render ready</span>
+    </footer>
+  </main>
+
+  <script type="module" src="/js/landing.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+{
+  "name": "priva-stremio",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Stream-only Stremio addon powered by the Priva Vega resolver and signed range proxy.",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "dev": "node --watch --env-file-if-exists=.env server/index.js",
+    "vendor": "node scripts/vendor.mjs",
+    "test": "node tests/addon.mjs",
+    "test:addon": "node tests/addon.mjs",
+    "test:resolver": "node tests/resolver.mjs",
+    "test:matcher": "node tests/matcher.mjs",
+    "test:vega": "node tests/vega-bridge.mjs",
+    "test:vendor": "node tests/vendor.mjs",
+    "test:ui": "node tests/ui.mjs",
+    "test:deploy": "node tests/deploy.mjs",
+    "test:all": "node tests/addon.mjs && node tests/resolver.mjs && node tests/matcher.mjs && node tests/vega-bridge.mjs && node tests/vendor.mjs && node tests/ui.mjs && node tests/deploy.mjs"
+  },
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "dependencies": {
+    "axios": "^1.20.0",
+    "cheerio": "^1.2.0",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "jsdom": "^30.1.3"
+  },
+  "keywords": [
+    "stremio",
+    "stremio-addon",
+    "streaming",
+    "hls",
+    "mkv",
+    "proxy"
+  ]
+}

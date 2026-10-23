@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Configure Priva — Stremio Stream Addon</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/app.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M8 5.5l11 6.5-11 6.5z" /></svg>
+      </span>
+      <span>Priva</span>
+      <span class="brand-badge">Configure</span>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="/">Overview</a>
+      <a href="/configure" aria-current="page">Configure</a>
+      <a href="/manifest.json" target="_blank" rel="noopener">Manifest</a>
+      <a href="/health" target="_blank" rel="noopener">Health</a>
+    </nav>
+  </header>
+
+  <main class="shell">
+    <div id="config-error" class="alert-banner" role="alert" hidden></div>
+
+    <section class="hero">
+      <h1>Configure your Stremio stream link</h1>
+      <p>
+        Choose providers, container preferences, and response budgets. Your choices encode directly
+        into the URL below so every device stays completely stateless.
+      </p>
+    </section>
+
+    <div class="grid-two">
+      <!-- Left column: Configuration Form + Live Stream Tester -->
+      <div class="stack">
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Identity &amp; playback</h2>
+              <p class="card-sub">Controls how streams appear and filter inside Stremio.</p>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">
+              <label for="addon-name">Addon name</label>
+              <span class="latency-tag" id="name-count">5 / 18</span>
+            </div>
+            <input
+              id="addon-name"
+              class="text-input"
+              type="text"
+              maxlength="18"
+              value="Priva"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <p class="field-hint">Shown in Stremio's installed addons list (maximum 18 characters).</p>
+          </div>
+
+          <div class="field">
+            <label class="toggle-row" for="toggle-mkv">
+              <span class="toggle-copy">
+                <strong>Include MKV streams</strong>
+                <span>Stremio Web cannot play MKV containers reliably — turn off if using web.stremio.com.</span>
+              </span>
+              <span class="switch">
+                <input id="toggle-mkv" type="checkbox" checked />
+                <span class="switch-track"></span>
+              </span>
+            </label>
+
+            <label class="toggle-row" for="toggle-proxy">
+              <span class="toggle-copy">
+                <strong>Include proxy rows</strong>
+                <span>Emits signed <code>/p/&lt;token&gt;</code> range-proxy streams alongside direct links for upstream hosts that require custom headers or CORS.</span>
+              </span>
+              <span class="switch">
+                <input id="toggle-proxy" type="checkbox" checked />
+                <span class="switch-track"></span>
+              </span>
+            </label>
+          </div>
+
+          <div class="field">
+            <div class="field-label">
+              <label for="max-streams">Max streams returned</label>
+              <output id="max-streams-out" class="latency-tag">20</output>
+            </div>
+            <input id="max-streams" type="range" min="10" max="30" step="1" value="20" />
+            <p class="field-hint">Caps the ranked stream list between 10 and 30 rows so Stremio stays snappy.</p>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Providers &amp; budgets</h2>
+              <p class="card-sub">Enable sources and tune per-provider timeouts (4–15 seconds).</p>
+            </div>
+            <button class="btn btn-sm" type="button" id="refresh-health-btn">Refresh health</button>
+          </div>
+
+          <div class="field" style="margin-bottom: 14px;">
+            <div class="field-label">
+              <label for="global-patience">Patience quick-set (all providers)</label>
+              <output id="global-patience-out" class="latency-tag">Custom</output>
+            </div>
+            <input id="global-patience" type="range" min="4" max="15" step="1" value="8" />
+          </div>
+
+          <div class="provider-list" id="provider-checkboxes">
+            <div class="provider-item">
+              <span class="provider-desc">Loading providers…</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Live stream tester</h2>
+              <p class="card-sub">Hits your exact configured <code>/&lt;config&gt;/stream/…</code> endpoint and inspects returned rows.</p>
+            </div>
+          </div>
+
+          <div class="preset-row" id="preset-row">
+            <button class="preset-chip active" type="button" data-type="movie" data-id="tt0133093">
+              Movie · The Matrix (tt0133093)
+            </button>
+            <button class="preset-chip" type="button" data-type="movie" data-id="tt1375666">
+              Movie · Inception (tt1375666)
+            </button>
+            <button class="preset-chip" type="button" data-type="series" data-id="tt0944947:1:1">
+              Series · Game of Thrones S1E1 (tt0944947:1:1)
+            </button>
+            <button class="preset-chip" type="button" data-type="series" data-id="tt0903747:1:1">
+              Series · Breaking Bad S1E1 (tt0903747:1:1)
+            </button>
+          </div>
+
+          <form id="test-form" class="tester-bar">
+            <select id="test-type" class="select-input" aria-label="Media type">
+              <option value="movie" selected>Movie</option>
+              <option value="series">Series</option>
+            </select>
+            <input
+              id="test-id"
+              class="text-input mono-input"
+              type="text"
+              value="tt0133093"
+              placeholder="tt0133093 or tt0944947:1:1"
+              aria-label="IMDb ID"
+            />
+            <button id="run-test-btn" class="btn btn-primary" type="submit">Test streams</button>
+          </form>
+
+          <div id="test-summary" class="test-summary" hidden></div>
+          <div id="test-results" class="stream-results"></div>
+        </section>
+      </div>
+
+      <!-- Right column: Live URL Output -->
+      <aside class="card install-sticky">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Install your configuration</h2>
+            <p class="card-sub">Updates automatically as you change any control.</p>
+          </div>
+        </div>
+
+        <a
+          id="install-stremio-btn"
+          class="btn btn-primary"
+          style="width: 100%; padding: 11px 16px; font-size: 14px;"
+          href="stremio://127.0.0.1:7000/manifest.json"
+        >
+          Install in Stremio
+        </a>
+
+        <div class="copy-grid">
+          <button id="copy-manifest-btn" class="btn" type="button">Copy manifest URL</button>
+          <button id="copy-install-btn" class="btn" type="button">Copy install link</button>
+          <button id="copy-stremio-btn" class="btn" type="button" style="grid-column: 1 / -1;">
+            Copy stremio:// link
+          </button>
+        </div>
+
+        <div class="field url-box">
+          <div class="field-label">
+            <label for="manifest-url-input">Manifest URL</label>
+          </div>
+          <input
+            id="manifest-url-input"
+            class="text-input mono-input"
+            type="text"
+            readonly
+            value=""
+          />
+        </div>
+
+        <p class="stateless-note">
+          Settings are saved directly inside this URL — nothing is stored on the server.
+          If you change a setting later, click <strong>Install in Stremio</strong> again to update it.
+        </p>
+      </aside>
+    </div>
+
+    <footer class="footer-note">
+      <span>Addon ID: <code>community.priva.streams</code></span>
+      <span>Reload a title once in Stremio if a slower source finishes after the first response.</span>
+    </footer>
+  </main>
+
+  <script type="module" src="/js/configure.js"></script>
+</body>
+</html>

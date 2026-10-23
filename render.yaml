@@ -1,0 +1,38 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+#
+# Deploy: push this repo, then Render -> New -> Blueprint -> pick the repo.
+# Free tier sleeps after 15 min idle (cold start ~50s, which exceeds Stremio's
+# stream request timeout). Use a paid instance or a 10-minute /health ping.
+
+services:
+  - type: web
+    name: priva-stremio
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: TOKEN_SECRET
+        generateValue: true
+      - key: TOKEN_TTL
+        value: "43200"
+      - key: VEGA_SOURCES
+        value: "castle,4khdhub,autoEmbed,movieBoxWeb,kissKh"
+      - key: VEGA_LINK_CONCURRENCY
+        value: "3"
+      - key: VEGA_TIMEOUTS
+        value: "castle=6000,autoEmbed=8000,movieBoxWeb=8000,kissKh=8000,4khdhub=10000"
+      - key: RESOLVE_GRACE_MS
+        value: "1000"
+      - key: TMDB_API_KEY
+        sync: false
+      - key: LOG_LEVEL
+        value: "info"
